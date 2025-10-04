@@ -100,10 +100,10 @@ NAME_ATTRIBUTE_MAPPING = {
     'company': ['ComName', 'company_name', '会社名', '企業名'],
     'department': ['DepName', 'department_name', '部署名'],
     'full_name': ['Name', 'inquiry_name', 'お名前', '氏名'],
-    'name_last': ['姓', 'last_name', 'sei'],
-    'name_first': ['名', 'first_name', 'mei'],
-    'furigana_last': ['セイ', 'kana_last', 'sei_kana'],
-    'furigana_first': ['メイ', 'kana_first', 'mei_kana'],
+    'name_last': ['姓', 'last_name', 'sei', 'your-name-sei'],
+    'name_first': ['名', 'first_name', 'mei', 'your-name-mei'],
+    'furigana_last': ['セイ', 'kana_last', 'sei_kana', 'your-kana-sei'],
+    'furigana_first': ['メイ', 'kana_first', 'mei_kana', 'your-kana-mei'],
     'full_furigana': ['KanaName', 'kana_name', 'フリガナ'],
     'email': ['EMAIL', 'email', 'inquiry_email', 'メール'],
     'email_confirm': ['email2', 'confirm_email', 'メール確認'],
@@ -404,10 +404,17 @@ def start_automation(driver, target_url, root_window):
             print("------------------------------------\n")
         
         if len(all_form_fields) == 0:
-            messagebox.showwarning("警告", "入力可能なフォーム要素が見つかりませんでした。")
-            return
+            return (False, "入力可能なフォームが見つかりませんでした")
         
-        priority_keys = ["company", "company_furigana", "department", "subject", "full_name", "name_last", "name_first", "furigana_last", "furigana_first", "full_furigana", "tel", "postal_code_1", "postal_code_2", "postal_code", "prefecture", "city", "address", "address_building", "email", "email_confirm", "url", "inquiry_body"]
+        # === 改修点: 処理の優先順位を変更 ===
+        priority_keys = [
+            "company", "company_furigana", "department", "subject", 
+            "name_last", "name_first", "full_name", 
+            "furigana_last", "furigana_first", "full_furigana", 
+            "tel", "postal_code_1", "postal_code_2", "postal_code", 
+            "prefecture", "city", "address", "address_building", 
+            "email", "email_confirm", "url", "inquiry_body"
+        ]
         
         for key in priority_keys:
             if key not in MY_DATA:
@@ -525,12 +532,18 @@ def start_automation(driver, target_url, root_window):
 
         if filled_count > 0:
             show_toast(root_window, f"{filled_count}個の項目を自動入力しました。")
+            return (True, "入力完了")
         else:
-            messagebox.showwarning("警告", "自動入力できる項目が見つかりませんでした。")
+            return (False, "自動入力できる項目が見つかりませんでした")
 
     except Exception as e:
         driver.switch_to.default_content()
-        messagebox.showerror("エラー", f"処理中にエラーが発生しました。\n\n{e}")
+        if DEBUG_MODE:
+            import traceback
+            print("--- ERROR in start_automation ---")
+            traceback.print_exc()
+            print("---------------------------------")
+        return (False, "処理中にエラーが発生しました")
 
 # ============================================================
 # GUI（ユーザーインターフェース）
@@ -542,7 +555,7 @@ def main_gui():
     """
     global browser_check_timer, status_label
     
-    INITIAL_STATUS_TEXT = "準備完了"
+    INITIAL_STATUS_TEXT = "URLをコピーしてボタンをクリック"
 
     def trigger_automation_from_click(event=None):
         """クリックイベントで自動化処理を開始"""
@@ -552,25 +565,27 @@ def main_gui():
         try:
             url = root.clipboard_get()
             if not url.startswith(("http://", "https://")):
-                status_label.config(text="クリップボードに有効なURLがありません。")
-                root.after(3000, lambda: status_label.config(text=INITIAL_STATUS_TEXT))
+                status_label.config(text="✗ クリップボードに有効なURLがありません", style="Error.TLabel")
+                root.after(3000, lambda: status_label.config(text=INITIAL_STATUS_TEXT, style="Status.TLabel"))
                 return
         except tk.TclError:
-            status_label.config(text="クリップボードが空か、URLではありません。")
-            root.after(3000, lambda: status_label.config(text=INITIAL_STATUS_TEXT))
+            status_label.config(text="✗ クリップボードが空か、URLではありません", style="Error.TLabel")
+            root.after(3000, lambda: status_label.config(text=INITIAL_STATUS_TEXT, style="Status.TLabel"))
             return
 
         if DEBUG_MODE: print(f"\n--- Automation Triggered for URL: {url} ---")
         
-        status_label.config(text="処理を開始します...")
+        status_label.config(text="処理を開始します...", style="Status.TLabel")
         
         if not is_browser_alive(driver):
             if DEBUG_MODE: print("DEBUG: Browser is not alive. Setting driver to None.")
             driver = None
         
         # 処理中はUIを無効化
-        clickable_frame.unbind("<Button-1>")
-        clickable_label.unbind("<Button-1>")
+        canvas.unbind("<Enter>")
+        canvas.unbind("<Leave>")
+        canvas.unbind("<Button-1>")
+        canvas.config(cursor="")
         edit_button.config(state="disabled")
         root.config(cursor="wait")
         root.update_idletasks()
@@ -585,30 +600,42 @@ def main_gui():
                 if DEBUG_MODE: print("DEBUG: New browser window created successfully.")
                 start_browser_check()
             except Exception as e:
-                messagebox.showerror("WebDriverエラー", f"Chrome Driverの起動に失敗しました。\n\n{e}")
                 # UIを再度有効化
-                clickable_frame.bind("<Button-1>", trigger_automation_from_click)
-                clickable_label.bind("<Button-1>", trigger_automation_from_click)
+                canvas.bind("<Enter>", on_enter)
+                canvas.bind("<Leave>", on_leave)
+                canvas.bind("<Button-1>", trigger_automation_from_click)
+                canvas.config(cursor="hand2")
                 edit_button.config(state="normal")
                 root.config(cursor="")
-                status_label.config(text="✗ エラーが発生しました")
-                root.after(3000, lambda: status_label.config(text=INITIAL_STATUS_TEXT))
+                status_label.config(text="✗ Chromeドライバの起動に失敗", style="Error.TLabel")
+                root.after(3000, lambda: status_label.config(text=INITIAL_STATUS_TEXT, style="Status.TLabel"))
                 return
 
         # 自動化処理を実行
         try:
-            status_label.config(text="入力中...")
-            start_automation(driver, url, root)
-            status_label.config(text="✓ 入力完了")
+            status_label.config(text="入力中...", style="Status.TLabel")
+            success, message = start_automation(driver, url, root)
+            if success:
+                 status_label.config(text=f"✓ {message}", style="Status.TLabel")
+            else:
+                 status_label.config(text=f"✗ {message}", style="Error.TLabel")
+
         except Exception as e:
-            status_label.config(text=f"✗ エラー: {e}")
+            status_label.config(text="✗ 予期せぬエラーが発生しました", style="Error.TLabel")
+            if DEBUG_MODE:
+                import traceback
+                print("--- FATAL ERROR in trigger_automation_from_click ---")
+                traceback.print_exc()
+                print("--------------------------------------------------")
         finally:
             # UIを再度有効化
-            clickable_frame.bind("<Button-1>", trigger_automation_from_click)
-            clickable_label.bind("<Button-1>", trigger_automation_from_click)
+            canvas.bind("<Enter>", on_enter)
+            canvas.bind("<Leave>", on_leave)
+            canvas.bind("<Button-1>", trigger_automation_from_click)
+            canvas.config(cursor="hand2")
             edit_button.config(state="normal")
             root.config(cursor="")
-            root.after(4000, lambda: status_label.config(text=INITIAL_STATUS_TEXT))
+            root.after(4000, lambda: status_label.config(text=INITIAL_STATUS_TEXT, style="Status.TLabel"))
     
     def start_browser_check():
         """ブラウザの状態チェックを開始（5秒ごと）"""
@@ -695,7 +722,7 @@ def main_gui():
     # --- メインウィンドウのセットアップ ---
     root = tk.Tk()
     root.title("フォーム自動入力ツール")
-    root.geometry("450x220")
+    root.geometry("320x320")
     root.protocol("WM_DELETE_WINDOW", on_closing)
     root.resizable(False, False)
 
@@ -703,8 +730,11 @@ def main_gui():
     style = ttk.Style()
     style.theme_use('clam')
     BG_COLOR = "#f2f2f2"
-    CLICK_BG_COLOR = "#ffffff"
     TEXT_COLOR = "#333333"
+    BUTTON_COLOR = "#4CAF50"  # Green
+    BUTTON_HOVER_COLOR = "#45a049" # Darker Green
+    BUTTON_TEXT_COLOR = "#FFFFFF"
+    ERROR_COLOR = "#D8000C" # Red
     
     root.configure(bg=BG_COLOR)
     
@@ -712,26 +742,34 @@ def main_gui():
     style.configure("TLabel", background=BG_COLOR, foreground=TEXT_COLOR, font=("Yu Gothic UI", 10))
     style.configure("TButton", font=("Yu Gothic UI", 10))
     style.configure("Status.TLabel", font=("Yu Gothic UI", 11), padding=(5,0))
-    style.configure("Click.TLabel", background=CLICK_BG_COLOR, foreground=TEXT_COLOR, font=("Yu Gothic UI", 12))
+    style.configure("Error.TLabel", font=("Yu Gothic UI", 11), padding=(5,0), foreground=ERROR_COLOR)
     
     # --- メインフレーム ---
     main_frame = ttk.Frame(root, padding="20")
     main_frame.pack(fill="both", expand=True)
 
-    # --- クリックエリア ---
-    clickable_frame = tk.Frame(main_frame, bg=CLICK_BG_COLOR, relief="solid", bd=1, cursor="hand2")
-    clickable_frame.pack(fill="both", expand=True, pady=(0, 15))
+    # --- 円形ボタン ---
+    canvas = tk.Canvas(main_frame, width=180, height=180, bg=BG_COLOR, bd=0, highlightthickness=0, cursor="hand2")
+    canvas.pack(pady=20)
+
+    button_oval = canvas.create_oval(5, 5, 175, 175, fill=BUTTON_COLOR, outline="")
     
-    clickable_label_text = "📋 URLをコピーして、ここをクリック 📋"
-    clickable_label = ttk.Label(clickable_frame, text=clickable_label_text, style="Click.TLabel", anchor="center")
-    clickable_label.place(relx=0.5, rely=0.5, anchor="center")
-    
-    clickable_frame.bind("<Button-1>", trigger_automation_from_click)
-    clickable_label.bind("<Button-1>", trigger_automation_from_click)
+    button_text_lines = "自動入力\nスタート"
+    button_text = canvas.create_text(90, 90, text=button_text_lines, fill=BUTTON_TEXT_COLOR, font=("Yu Gothic UI", 22, "bold"), justify="center")
+
+    def on_enter(event):
+        canvas.itemconfig(button_oval, fill=BUTTON_HOVER_COLOR)
+
+    def on_leave(event):
+        canvas.itemconfig(button_oval, fill=BUTTON_COLOR)
+
+    canvas.bind("<Enter>", on_enter)
+    canvas.bind("<Leave>", on_leave)
+    canvas.bind("<Button-1>", trigger_automation_from_click)
 
     # --- 下部エリア (ステータスと設定ボタン) ---
     bottom_frame = ttk.Frame(main_frame)
-    bottom_frame.pack(fill="x", side="bottom")
+    bottom_frame.pack(fill="x", side="bottom", pady=(10, 0))
     bottom_frame.columnconfigure(0, weight=1)
 
     # ステータスラベル
@@ -749,3 +787,4 @@ def main_gui():
 # ============================================================
 if __name__ == '__main__':
     main_gui()
+
