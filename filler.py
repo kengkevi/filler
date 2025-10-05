@@ -97,22 +97,23 @@ KEYWORDS = {
 # 様々なフォームで使われるname属性のパターンを登録
 # 新しいフォームに対応する場合、ここに追加するだけでOK
 NAME_ATTRIBUTE_MAPPING = {
-    'company': ['ComName', 'company_name', '会社名', '企業名'],
-    'department': ['DepName', 'department_name', '部署名'],
-    'full_name': ['Name', 'inquiry_name', 'お名前', '氏名'],
-    'name_last': ['姓', 'last_name', 'sei', 'your-name-sei'],
-    'name_first': ['名', 'first_name', 'mei', 'your-name-mei'],
-    'furigana_last': ['セイ', 'kana_last', 'sei_kana', 'your-kana-sei'],
-    'furigana_first': ['メイ', 'kana_first', 'mei_kana', 'your-kana-mei'],
-    'full_furigana': ['KanaName', 'kana_name', 'フリガナ'],
-    'email': ['EMAIL', 'email', 'inquiry_email', 'メール'],
-    'email_confirm': ['email2', 'confirm_email', 'メール確認'],
-    'tel': ['telephone', 'tel', 'inquiry_tel', '電話', 'お電話'],
-    'postal_code_1': ['zipcode1', 'zip1', '郵便番号1'],
-    'postal_code_2': ['zipcode2', 'zip2', '郵便番号2'],
-    'address': ['address', 'Prefecture', '住所'],
-    'address_building': ['building', 'ビル名'],
-    'inquiry_body': ['text', 'inquiry_content', 'message', 'お問い合わせ'],
+    "company": ["ComName", "company_name", "会社名", "企業名", "your-company"],
+    "department": ["DepName", "department_name", "部署名"],
+    "full_name": ["Name", "inquiry_name", "お名前", "氏名", "your-name", "your-name01"],
+    "name_last": ["姓", "last_name", "sei", "your-name-sei", "name-last"],
+    "name_first": ["名", "first_name", "mei", "your-name-mei", "name-first"],
+    "furigana_last": ["セイ", "kana_last", "sei_kana", "your-kana-sei", "kana-last"],
+    "furigana_first": ["メイ", "kana_first", "mei_kana", "your-kana-mei", "kana-first"],
+    "full_furigana": ["KanaName", "kana_name", "フリガナ", "KanaName2", "your-kana", "your-name02"],
+    "email": ["EMAIL", "email", "inquiry_email", "メール", "mail", "your-email", "email-mail"],
+    "email_confirm": ["email2", "confirm_email", "メール確認", "mail_addr2", "mail_conf", "your-email_confirm"],
+    "tel": ["telephone", "tel", "inquiry_tel", "電話", "お電話", "your-tel", "your-phone", "tel-phone"],
+    "postal_code": ["your-zipcode"],
+    "postal_code_1": ["zipcode1", "zip1", "郵便番号1"],
+    "postal_code_2": ["zipcode2", "zip2", "郵便番号2"],
+    "address": ["address", "Prefecture", "住所", "your-address"],
+    "address_building": ["building", "ビル名"],
+    "inquiry_body": ["text", "inquiry_content", "message", "お問い合わせ", "your-message", "your-textarea", "textarea-message"],
 }
 
 # ============================================================
@@ -201,6 +202,7 @@ def find_label_text_for_element(driver, element):
     入力要素に対応するラベルテキストを見つける
     """
     try:
+        # パターン1: <label for="element_id">
         element_id = element.get_attribute('id')
         if element_id:
             labels = driver.find_elements(By.XPATH, f"//label[@for='{element_id}']")
@@ -209,6 +211,7 @@ def find_label_text_for_element(driver, element):
                 if text and text.strip():
                     return text.strip().replace("必須", "").replace("*", "").replace("※", "").strip()
 
+        # パターン2: <label>項目名<入力欄></label>
         ancestor_labels = element.find_elements(By.XPATH, "./ancestor::label[1]")
         if ancestor_labels:
             text = driver.execute_script(
@@ -218,6 +221,25 @@ def find_label_text_for_element(driver, element):
             if text and text.strip():
                 return text.strip().replace("必須", "").replace("*", "").replace("※", "").strip()
 
+        # パターン3 (新): 厳密なテーブル構造 (tr > th)
+        ancestor_row = element.find_elements(By.XPATH, "./ancestor::tr[1]")
+        if ancestor_row:
+            label_header = ancestor_row[0].find_elements(By.XPATH, ".//th")
+            if label_header:
+                text = driver.execute_script("return arguments[0].textContent;", label_header[0])
+                if text and text.strip():
+                    return text.strip().replace("必須", "").replace("*", "").replace("※", "").strip()
+
+        # パターン4: 定義リスト構造 <dl><dt>ラベル</dt><dd><input></dd></dl>
+        ancestor_dd = element.find_elements(By.XPATH, "./ancestor::dd[1]")
+        if ancestor_dd:
+            label_dt = ancestor_dd[0].find_elements(By.XPATH, "./preceding-sibling::dt[1]")
+            if label_dt:
+                text = driver.execute_script("return arguments[0].textContent;", label_dt[0])
+                if text and text.strip():
+                    return text.strip().replace("必須", "").replace("*", "").replace("※", "").strip()
+
+        # パターン5: Bootstrapのform-group構造
         container = element.find_elements(By.XPATH, "./ancestor::div[contains(@class, 'form-group')][1]")
         if container:
             labels = container[0].find_elements(By.XPATH, ".//label")
@@ -225,15 +247,8 @@ def find_label_text_for_element(driver, element):
                 text = driver.execute_script("return arguments[0].textContent;", labels[0])
                 if text and text.strip():
                     return text.strip().replace("必須", "").replace("*", "").replace("※", "").strip()
-
-        ancestor_cell = element.find_elements(By.XPATH, "./ancestor::td[1]")
-        if ancestor_cell:
-            label_cells = ancestor_cell[0].find_elements(By.XPATH, "./preceding-sibling::th[1] | ./preceding-sibling::td[1]")
-            if label_cells:
-                text = driver.execute_script("return arguments[0].textContent;", label_cells[0])
-                if text and text.strip():
-                    return text.strip().replace("必須", "").replace("*", "").replace("※", "").strip()
         
+        # パターン6: 一般的なコンテナ構造
         container = element.find_elements(By.XPATH, "./ancestor::*[self::p or self::div or self::li][1]")
         if container:
             all_text = driver.execute_script(
@@ -245,6 +260,18 @@ def find_label_text_for_element(driver, element):
             )
             if all_text and all_text.strip():
                 return all_text.strip().split('\n')[0].replace("必須", "").replace("*", "").replace("※", "").strip()
+
+        # パターン7: 直前の兄弟要素のテキストを取得 (p, span, brなど)
+        preceding_sibling = element.find_elements(By.XPATH, "./preceding-sibling::*[self::p or self::span or self::div or self::br][1]")
+        if preceding_sibling:
+            if preceding_sibling[0].tag_name == 'br':
+                 preceding_sibling = element.find_elements(By.XPATH, "./preceding-sibling::*[self::p or self::span or self::div][1]")
+            
+            if preceding_sibling:
+                text = driver.execute_script("return arguments[0].textContent;", preceding_sibling[0])
+                if text and text.strip():
+                    if any(kw in text for kw in ["確認", "もう一度", "confirm"]):
+                         return text.strip().replace("必須", "").replace("*", "").replace("※", "").strip()
 
     except (NoSuchElementException, StaleElementReferenceException):
         pass
@@ -406,7 +433,6 @@ def start_automation(driver, target_url, root_window):
         if len(all_form_fields) == 0:
             return (False, "入力可能なフォームが見つかりませんでした")
         
-        # === 改修点: 処理の優先順位を変更 ===
         priority_keys = [
             "company", "company_furigana", "department", "subject", 
             "name_last", "name_first", "full_name", 
@@ -420,7 +446,7 @@ def start_automation(driver, target_url, root_window):
             if key not in MY_DATA:
                 continue
             
-            for field in all_form_fields:
+            for index, field in enumerate(all_form_fields):
                 element = field['element']
                 if element in filled_elements:
                     continue
@@ -443,6 +469,41 @@ def start_automation(driver, target_url, root_window):
                 if not is_match:
                     for kw in KEYWORDS.get(key, []):
                         if kw in full_context:
+                            # "フリガナ"という曖昧なキーワードの場合、直前の項目を参考にする
+                            if key in ["company_furigana", "full_furigana", "furigana_last", "furigana_first"] and kw in ["フリガナ", "ふりがな", "カナ"]:
+                                if index > 0:
+                                    # 直前の入力フィールドの情報を取得
+                                    previous_field = all_form_fields[index - 1]
+                                    previous_field_context = previous_field['label'] + previous_field['placeholder'] + previous_field['name']
+                                    
+                                    # 直前の項目が「会社」関連か
+                                    is_company_context = any(comp_kw in previous_field_context for comp_kw in KEYWORDS.get('company', []))
+                                    # 直前の項目が「氏名」関連か
+                                    is_name_context = any(name_kw in previous_field_context for name_kw in KEYWORDS.get('full_name', []) + KEYWORDS.get('name_last', []) + KEYWORDS.get('name_first', []))
+                                    
+                                    # 今探しているのが「会社フリガナ」だが、直前が会社関連でない場合はスキップ
+                                    if key == "company_furigana" and not is_company_context:
+                                        if DEBUG_MODE: print(f"DEBUG: Context check: Skipping '{field['name']}' for 'company_furigana' as previous field is not company-related.")
+                                        continue
+                                    
+                                    # 今探しているのが「氏名フリガナ」だが、直前が氏名関連でない場合はスキップ
+                                    if key in ["full_furigana", "furigana_last", "furigana_first"] and not is_name_context:
+                                        if DEBUG_MODE: print(f"DEBUG: Context check: Skipping '{field['name']}' for name furigana as previous field is not name-related.")
+                                        continue
+
+                            # 「姓」「名」を判定する際、より厳密なチェックを行う
+                            if key in ['name_last', 'name_first']:
+                                if any(fullname_kw in full_context for fullname_kw in ["お名前", "氏名", "担当者名", "fullname", "ご担当者"]):
+                                    continue 
+                            
+                            # === START: 改修点 (キーワード判定の厳格化) ===
+                            # 分割郵便番号のキーワードが他のname属性と誤って一致するのを防ぐ
+                            if key in ['postal_code_1', 'postal_code_2']:
+                                if not any(zip_kw in full_context for zip_kw in ["郵便", "zip", "postal", "〒"]):
+                                    if DEBUG_MODE: print(f"DEBUG: Keyword '{kw}' matched for {key}, but postal context is missing. Skipping.")
+                                    continue
+                            # === END: 改修点 ===
+
                             if should_exclude_field(key, field, full_context): continue
                             if key == 'email' and any(k in full_context for k in ['確認', 'Confirm', 'confirm']): continue
                             if key == 'email_confirm' and not any(k in full_context for k in ['確認', 'Confirm', 'confirm']): continue
@@ -465,11 +526,17 @@ def start_automation(driver, target_url, root_window):
                     try:
                         text_to_send = MY_DATA[key]
                         
-                        if key in ['tel', 'postal_code', 'postal_code_1', 'postal_code_2'] and 'ハイフンなし' in field['label']:
-                            text_to_send = text_to_send.replace('-', '')
+                        # 郵便番号と電話番号のハイフン処理
+                        if key in ['tel', 'postal_code']:
+                            include_hyphen_keywords = ["ハイフンあり", "ハイフンを入れて", "ハイフン付き", "ハイフン有"]
+                            if any(kw in full_context for kw in include_hyphen_keywords):
+                                pass
+                            else:
+                                text_to_send = text_to_send.replace('-', '')
+                        
                         if key in ['postal_code_1', 'postal_code_2']:
                             text_to_send = text_to_send.replace('-', '')
-                        
+
                         if key == 'inquiry_body' and not subject_field_found:
                             text_to_send = f"{MY_DATA.get('subject', '')}\n\n{MY_DATA[key]}"
                         
@@ -488,7 +555,7 @@ def start_automation(driver, target_url, root_window):
                             filled_count += 1
                             
                             if DEBUG_MODE:
-                                print(f"DEBUG: Filled '{key}' in {field['context']}")
+                                print(f"DEBUG: Filled '{key}' in {field['context']} (Label: {field['label']}, Name: {field['name']})")
                         
                         driver.switch_to.default_content()
                         break
@@ -513,10 +580,20 @@ def start_automation(driver, target_url, root_window):
                 checkboxes = driver.find_elements(By.XPATH, "//input[@type='checkbox']")
                 for checkbox in checkboxes:
                     try:
-                        parent = checkbox.find_element(By.XPATH, "./ancestor::*[self::label or self::div or self::p][1]")
-                        context_text = driver.execute_script("return arguments[0].textContent;", parent)
+                        # === START: 改修点 (同意チェックボックスの特定ロジックを強化) ===
+                        parent_container = checkbox.find_elements(By.XPATH, "./ancestor::div[1]")
+                        context_text = ""
+                        if parent_container:
+                            context_text = driver.execute_script("return arguments[0].textContent;", parent_container[0])
+                        else:
+                            parent = checkbox.find_element(By.XPATH, "./ancestor::*[self::label or self::p or self::span][1]")
+                            context_text = driver.execute_script("return arguments[0].textContent;", parent)
                         
-                        if any(kw in context_text for kw in ["同意", "プライバシー", "個人情報", "利用規約", "承諾"]):
+                        checkbox_name = checkbox.get_attribute('name') or ""
+                        full_checkbox_context = context_text + " " + checkbox_name
+                        
+                        if any(kw in full_checkbox_context for kw in ["同意", "プライバシー", "個人情報", "利用規約", "承諾", "privacy", "acceptance"]):
+                        # === END: 改修点 ===
                             if checkbox.is_displayed() and checkbox.is_enabled() and not checkbox.is_selected():
                                 driver.execute_script("arguments[0].click();", checkbox)
                                 filled_count += 1
