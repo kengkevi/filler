@@ -1,0 +1,222 @@
+{
+  "score_threshold": 5,
+  "priority": [
+    "company", "company_furigana", "department", "subject",
+    "name_last", "name_first", "full_name",
+    "hiragana_last", "hiragana_first", "furigana_last", "furigana_first", 
+    "full_hiragana", "full_furigana",
+    "tel", "postal_code", "postal_code_1", "postal_code_2",
+    "prefecture", "city", "address", "address_building",
+    "email", "email_confirm", "url", "inquiry_body"
+  ],
+  "company": {
+    "attributes": {
+      "name": {
+        "contains": { "company": 50, "corporate": 40, "corp": 40, "organization": 30, "kaisha": 50 },
+        "exact": { "company": 60, "your-company": 60, "companyname": 60 }
+      },
+      "label": {
+        "contains": { "会社": 50, "企業": 50, "法人": 50, "貴社": 60, "御社": 60 }
+      },
+      "placeholder": {
+        "contains": { "会社": 30, "企業": 30, "法人": 30 }
+      }
+    }
+  },
+   "department": {
+    "attributes": {
+      "name": {
+        "contains": { "department": 60, "dept": 60 }
+      },
+      "label": {
+        "contains": { "部署": 60 }
+      }
+    }
+  },
+  "full_name": {
+    "attributes": {
+      "name": {
+        "contains": { "name": 40, "namae": 40, "fullname": 50, "shimei": 50 },
+        "exact": { "your-name": 60, "name": 50, "your-name01": 60 }
+      },
+      "label": {
+        "contains": { "名前": 50, "氏名": 60, "担当者": 60, "担当": 40 }
+      },
+      "placeholder": {
+        "contains": { "山田": 20, "太郎": 20, "名前": 30, "氏名": 30 }
+      }
+    },
+    "exclusions": [
+      { "attribute": "name", "contains": ["last", "first", "sei", "mei", "kana", "furigana", "フリガナ", "ふりがな", "name02", "hurigana"] },
+      { "attribute": "label", "contains": ["フリガナ", "ふりがな", "kana", "furigana"] }
+    ]
+  },
+  "name_last": {
+    "attributes": {
+      "name": {
+        "contains": { "lastname": 50, "familyname": 50, "sei": 50, "name-last": 60 },
+        "exact": { "sei": 60, "姓": 60 }
+      },
+      "label": {
+        "contains": { "姓": 60, "苗字": 60 }
+      },
+      "placeholder": {
+        "contains": { "山田": 30, "姓": 40 }
+      }
+    },
+    "exclusions": [
+        { "attribute": "label", "contains": ["お名前", "氏名"] }
+    ]
+  },
+  "name_first": {
+    "attributes": {
+      "name": {
+        "contains": { "firstname": 50, "givenname": 50, "mei": 50, "name-first": 60 },
+        "exact": { "mei": 60, "名": 60 }
+      },
+      "label": {
+        "contains": { "名": 60 }
+      },
+      "placeholder": {
+        "contains": { "太郎": 30, "名": 40 }
+      }
+    },
+    "exclusions": [
+        { "attribute": "label", "contains": ["お名前", "氏名", "部署", "担当者"] }
+    ]
+  },
+  "furigana_last": {
+    "attributes": {
+      "name": { "contains": { "kana-last": 60, "furigana-last": 60 } },
+      "label": { "contains": { "セイ": 60, "姓": 20 } },
+      "placeholder": { "contains": { "ヤマダ": 30 } }
+    }
+  },
+  "furigana_first": {
+    "attributes": {
+      "name": { "contains": { "kana-first": 60, "furigana-first": 60 } },
+      "label": { "contains": { "メイ": 60, "名": 20 } },
+      "placeholder": { "contains": { "タロウ": 30 } }
+    }
+  },
+  "hiragana_last": {
+    "attributes": {
+      "name": { "contains": { "kana-last": 50, "hiragana-last": 60 } },
+      "label": { "contains": { "せい": 60, "姓": 20 } },
+      "placeholder": { "contains": { "やまだ": 30 } }
+    }
+  },
+  "hiragana_first": {
+    "attributes": {
+      "name": { "contains": { "kana-first": 50, "hiragana-first": 60 } },
+      "label": { "contains": { "めい": 60, "名": 20 } },
+      "placeholder": { "contains": { "たろう": 30 } }
+    }
+  },
+  "full_furigana": {
+    "attributes": {
+      "name": {
+        "contains": { "kana": 50, "furigana": 50, "yomigana": 50 },
+        "exact": {"your-name02": 60}
+      },
+      "label": {
+        "contains": { "フリガナ": 60, "セイメイ": 50 }
+      },
+      "placeholder": {
+        "contains": { "ヤマダ": 20, "タロウ": 20, "フリガナ": 30 }
+      }
+    },
+     "exclusions": [
+      { "attribute": "name", "contains": ["last", "first"] }
+    ]
+  },
+  "full_hiragana": {
+     "attributes": {
+      "name": {
+        "contains": { "kana": 50, "furigana": 50, "yomigana": 50, "hurigana": 60 }
+      },
+      "label": {
+        "contains": { "ふりがな": 60 }
+      },
+      "placeholder": {
+        "contains": { "やまだ": 20, "たろう": 20, "ふりがな": 30 }
+      }
+    },
+     "exclusions": [
+      { "attribute": "name", "contains": ["last", "first"] }
+    ]
+  },
+  "tel": {
+    "attributes": {
+      "type": { "exact": { "tel": 60 } },
+      "name": {
+        "contains": { "tel": 50, "phone": 50, "denwa": 50 }
+      },
+      "label": {
+        "contains": { "電話": 60, "連絡先": 40 }
+      },
+      "placeholder": {
+        "contains": { "080": 20, "03": 20, "電話": 30 }
+      }
+    }
+  },
+  "email": {
+    "attributes": {
+      "type": { "exact": { "email": 60 } },
+      "name": { "contains": { "email": 50, "mail": 50 } },
+      "label": { "contains": { "メール": 60, "mail": 60 } },
+      "placeholder": { "contains": { "@": 30, "example.com": 30 } }
+    },
+    "exclusions": [
+      { "attribute": "name", "contains": ["confirm", "check", "conf"] },
+      { "attribute": "label", "contains": ["確認"] }
+    ]
+  },
+  "email_confirm": {
+    "attributes": {
+      "type": { "exact": { "email": 40 } },
+      "name": { "contains": { "confirm": 50, "check": 50, "conf": 50, "_confirm": 60 } },
+      "label": { "contains": { "確認": 60 } },
+      "placeholder": { "contains": { "確認": 40, "もう一度": 40 } }
+    }
+  },
+  "postal_code": {
+    "attributes": {
+      "name": { "contains": { "zip": 50, "postal": 50, "yubin": 50 } },
+      "label": { "contains": { "郵便": 60 } },
+      "placeholder": { "contains": { "123": 20, "〒": 30 } }
+    },
+    "exclusions": [
+      { "attribute": "name", "contains": ["1", "2", "first", "last"] }
+    ]
+  },
+  "postal_code_1": {
+    "attributes": {
+      "name": { "contains": { "zip1": 60, "postal1": 60, "zip_first": 60, "zip-first": 60} },
+      "label": { "contains": { "郵便": 20 } },
+      "id": { "contains": {"-first": 30} }
+    }
+  },
+  "postal_code_2": {
+    "attributes": {
+      "name": { "contains": { "zip2": 60, "postal2": 60, "zip_last": 60, "zip-last": 60} },
+      "label": { "contains": { "郵便": 20 } },
+      "id": { "contains": {"-last": 30} }
+    }
+  },
+  "address": {
+    "attributes": {
+        "name": { "contains": { "address": 50, "addr": 50, "jusho": 50 } },
+        "label": { "contains": { "住所": 60, "所在地": 50 } },
+        "placeholder": { "contains": { "市区町村": 20, "番地": 20, "住所": 30 } }
+    }
+  },
+  "inquiry_body": {
+    "attributes": {
+        "name": { "contains": { "message": 50, "inquiry": 50, "comment": 50, "detail": 50, "textarea": 50 } },
+        "label": { "contains": { "内容": 60, "詳細": 50, "メッセージ": 50 } },
+        "placeholder": { "contains": { "内容": 30, "メッセージ": 30 } }
+    }
+  }
+}
+
